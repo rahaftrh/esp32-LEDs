@@ -1,0 +1,87 @@
+https://wokwi.com/projects/370502564469939201
+
+
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid = "Wokwi-GUEST";
+const char* password = "";
+
+const char* urls[] = {
+  "https://s-m.com.sa/smtc/test/hbvfd/retrieve.php",
+  "https://s-m.com.sa/s.html"
+};
+const int num_urls = sizeof(urls) / sizeof(urls[0]);
+
+String payload = "";
+
+// Define the pins for the four LEDs
+const int LED_PIN_1 = 25;
+const int LED_PIN_2 = 26;
+const int LED_PIN_3 = 27;
+const int LED_PIN_4 = 14;
+
+// Define a flag to keep track of the state of the LEDs
+bool leds_on = false;
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+
+  // Initialize the pins for the four LEDs
+  pinMode(LED_PIN_1, OUTPUT);
+  pinMode(LED_PIN_2, OUTPUT);
+  pinMode(LED_PIN_3, OUTPUT);
+  pinMode(LED_PIN_4, OUTPUT);
+
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.print("OK! IP=");
+  Serial.println(WiFi.localIP());
+
+  Serial.print("Fetching URLs...");
+}
+
+void loop() {
+  for (int i = 0; i < num_urls; i++) {
+    HTTPClient http;
+    http.begin(urls[i]);
+    int httpResponseCode = http.GET();
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP ");
+      Serial.println(httpResponseCode);
+      payload = http.getString();
+      Serial.println();
+      Serial.println(payload);
+
+      // If the payload is "forward" and the LEDs are currently off, turn on all four LEDs
+      if( payload == "forward" && !leds_on ){
+        digitalWrite(LED_PIN_1, HIGH);
+        digitalWrite(LED_PIN_2, HIGH);
+        digitalWrite(LED_PIN_3, HIGH);
+        digitalWrite(LED_PIN_4, HIGH);
+        leds_on = true;
+      } 
+      // If the payload is "stop" and the LEDs are currently on, turn off all four LEDs
+      else if (payload == "stop" && leds_on) {
+        digitalWrite(LED_PIN_1, LOW);
+        digitalWrite(LED_PIN_2, LOW);
+        digitalWrite(LED_PIN_3, LOW);
+        digitalWrite(LED_PIN_4, LOW);
+        leds_on = false;
+      }
+    }
+    else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      Serial.println(":-(");
+    }
+    http.end();
+  }
+  delay(500);
+}
